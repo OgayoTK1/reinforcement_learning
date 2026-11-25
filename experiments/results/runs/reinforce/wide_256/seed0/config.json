@@ -1,0 +1,8 @@
+{
+  "algo": "reinforce",
+  "name": "wide_256",
+  "factor": "wider network",
+  "seed": 0,
+  "total_steps": 40000,
+  "hidden": 256
+}

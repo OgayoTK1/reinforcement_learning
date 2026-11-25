@@ -1,0 +1,13 @@
+{
+  "algo": "ppo",
+  "name": "lambda_0.8",
+  "factor": "lower GAE lambda",
+  "seed": 0,
+  "total_steps": 40000,
+  "lmbda": 0.8,
+  "status": "ok",
+  "train_seconds": 109.7,
+  "best_val_return": -0.05712896018056405,
+  "steps": 40960,
+  "updates": 960
+}

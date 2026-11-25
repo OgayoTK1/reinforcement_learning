@@ -1,0 +1,29 @@
+{
+  "algo": "a2c",
+  "hidden": 128,
+  "depth": 2,
+  "activation": "tanh",
+  "config": {
+    "lr": 0.0007,
+    "gamma": 0.99,
+    "lmbda": 0.95,
+    "ent_coef": 0.01,
+    "critic_coef": 0.5,
+    "frames_per_batch": 512,
+    "hidden": 128,
+    "depth": 2,
+    "activation": "tanh",
+    "max_grad_norm": 0.5,
+    "eval_every_frac": 0.1,
+    "algo": "a2c",
+    "name": "nstep_512",
+    "factor": "long rollouts",
+    "seed": 0,
+    "total_steps": 40000
+  },
+  "step": 40448,
+  "obs_dim": 65,
+  "n_actions": 20,
+  "spec_hash": "df42fd8c1dd5",
+  "env_version": "1.0"
+}

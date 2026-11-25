@@ -1,0 +1,12 @@
+{
+  "algo": "a2c",
+  "name": "base",
+  "factor": "default",
+  "seed": 0,
+  "total_steps": 40000,
+  "status": "ok",
+  "train_seconds": 104.3,
+  "best_val_return": 0.05564089869589025,
+  "steps": 40064,
+  "updates": 313
+}

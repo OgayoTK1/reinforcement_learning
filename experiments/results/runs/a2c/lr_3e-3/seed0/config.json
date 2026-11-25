@@ -1,0 +1,8 @@
+{
+  "algo": "a2c",
+  "name": "lr_3e-3",
+  "factor": "learning rate up",
+  "seed": 0,
+  "total_steps": 40000,
+  "lr": 0.003
+}

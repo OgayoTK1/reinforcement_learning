@@ -1,0 +1,13 @@
+{
+  "algo": "dqn",
+  "name": "batch_256",
+  "factor": "larger minibatch",
+  "seed": 0,
+  "total_steps": 40000,
+  "batch_size": 256,
+  "status": "ok",
+  "train_seconds": 158.9,
+  "best_val_return": -0.07432900912104531,
+  "steps": 40000,
+  "updates": 9752
+}

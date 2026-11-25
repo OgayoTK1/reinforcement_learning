@@ -1,0 +1,13 @@
+{
+  "algo": "ppo",
+  "name": "lr_1e-4",
+  "factor": "learning rate down",
+  "seed": 0,
+  "total_steps": 40000,
+  "lr": 0.0001,
+  "status": "ok",
+  "train_seconds": 108.9,
+  "best_val_return": -0.24053734271636387,
+  "steps": 40960,
+  "updates": 960
+}

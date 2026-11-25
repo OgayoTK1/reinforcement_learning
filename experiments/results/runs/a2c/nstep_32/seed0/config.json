@@ -1,0 +1,8 @@
+{
+  "algo": "a2c",
+  "name": "nstep_32",
+  "factor": "very short rollouts",
+  "seed": 0,
+  "total_steps": 40000,
+  "frames_per_batch": 32
+}

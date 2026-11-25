@@ -1,0 +1,13 @@
+{
+  "algo": "a2c",
+  "name": "nstep_32",
+  "factor": "very short rollouts",
+  "seed": 0,
+  "total_steps": 40000,
+  "frames_per_batch": 32,
+  "status": "ok",
+  "train_seconds": 103.7,
+  "best_val_return": 0.15218405797551338,
+  "steps": 40000,
+  "updates": 1250
+}

@@ -1,0 +1,30 @@
+- name: base
+  factor: default
+- name: lr_3e-3
+  factor: learning rate up
+  lr: 0.003
+- name: lr_3e-4
+  factor: learning rate down
+  lr: 0.0003
+- name: gamma_0.95
+  factor: shorter horizon
+  gamma: 0.95
+- name: gamma_0.999
+  factor: longer horizon
+  gamma: 0.999
+- name: episodes_4
+  factor: few episodes per update (noisy gradient)
+  episodes_per_update: 4
+- name: episodes_64
+  factor: many episodes per update
+  episodes_per_update: 64
+- name: entropy_0.05
+  factor: entropy bonus up
+  ent_coef: 0.05
+- name: no_baseline
+  factor: raw returns, no baseline
+  baseline: none
+  normalize: false
+- name: wide_256
+  factor: wider network
+  hidden: 256

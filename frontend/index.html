@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AgriResilience RL: Njoro maize plot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="view"></canvas>
+    <div id="banner"><span id="b-date">Week 0</span><span id="b-stage"></span><span id="b-weather"></span></div>
+    <div id="conn">connecting</div>
+  </div>
+  <aside id="book">
+    <header>
+      <h1>Farm record book</h1>
+      <p class="sub">Njoro, Nakuru County. One acre of maize in four plots. Every figure comes from the Gymnasium environment.</p>
+    </header>
+
+    <section id="controls">
+      <label>Who is farming
+        <select id="policy"></select></label>
+      <label>Season
+        <select id="scenario"></select></label>
+      <div class="row">
+        <label>Episode seed <input id="seed" type="number" value="1000" min="0"></label>
+        <label>Speed <select id="speed"><option value="0.5">slow</option><option value="1" selected>normal</option><option value="3">fast</option><option value="8">very fast</option></select></label>
+      </div>
+      <div class="row buttons">
+        <button id="btn-start">Start</button><button id="btn-pause">Pause</button><button id="btn-resume">Resume</button><button id="btn-reset">Reset</button>
+      </div>
+    </section>
+
+    <section id="manual" hidden>
+      <h2>Choose this week's work</h2>
+      <div id="action-buttons"></div>
+    </section>
+
+    <section>
+      <h2>This week</h2>
+      <table class="ledger" id="t-week"></table>
+      <div id="rainbars" title="Daily rain this week (mm)"></div>
+    </section>
+
+    <section>
+      <h2>Plots</h2>
+      <table id="t-plots"></table>
+    </section>
+
+    <section>
+      <h2>Money, water and store</h2>
+      <table class="ledger" id="t-res"></table>
+    </section>
+
+    <section>
+      <h2>Last action</h2>
+      <div id="last-action" class="note">Nothing yet.</div>
+      <div id="reward"></div>
+    </section>
+
+    <section>
+      <h2>Season log</h2>
+      <ol id="log"></ol>
+    </section>
+
+    <section id="summary" hidden>
+      <h2>Season closed</h2>
+      <table class="ledger" id="t-summary"></table>
+    </section>
+  </aside>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

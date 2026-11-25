@@ -1,0 +1,13 @@
+{
+  "algo": "reinforce",
+  "name": "gamma_0.999",
+  "factor": "longer horizon",
+  "seed": 0,
+  "total_steps": 40000,
+  "gamma": 0.999,
+  "status": "ok",
+  "train_seconds": 87.1,
+  "best_val_return": -0.3103429092042371,
+  "steps": 40692,
+  "updates": 74
+}

@@ -1,0 +1,7 @@
+{
+  "algo": "reinforce",
+  "name": "base",
+  "factor": "default",
+  "seed": 0,
+  "total_steps": 40000
+}

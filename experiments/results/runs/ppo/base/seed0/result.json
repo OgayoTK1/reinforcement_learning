@@ -1,0 +1,12 @@
+{
+  "algo": "ppo",
+  "name": "base",
+  "factor": "default",
+  "seed": 0,
+  "total_steps": 40000,
+  "status": "ok",
+  "train_seconds": 106.0,
+  "best_val_return": 0.055648919422753254,
+  "steps": 40960,
+  "updates": 960
+}

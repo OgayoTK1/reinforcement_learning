@@ -1,0 +1,12 @@
+{
+  "algo": "reinforce",
+  "name": "base",
+  "factor": "default",
+  "seed": 0,
+  "total_steps": 40000,
+  "status": "ok",
+  "train_seconds": 89.3,
+  "best_val_return": -0.3103429092042371,
+  "steps": 40337,
+  "updates": 66
+}

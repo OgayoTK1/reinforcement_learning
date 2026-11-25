@@ -1,0 +1,13 @@
+{
+  "algo": "reinforce",
+  "name": "lr_3e-3",
+  "factor": "learning rate up",
+  "seed": 0,
+  "total_steps": 40000,
+  "lr": 0.003,
+  "status": "ok",
+  "train_seconds": 96.8,
+  "best_val_return": -0.12303544263164859,
+  "steps": 40134,
+  "updates": 58
+}

@@ -1,0 +1,13 @@
+{
+  "algo": "ppo",
+  "name": "clip_0.3",
+  "factor": "looser clip",
+  "seed": 0,
+  "total_steps": 40000,
+  "clip_eps": 0.3,
+  "status": "ok",
+  "train_seconds": 115.2,
+  "best_val_return": 0.041174313683551865,
+  "steps": 40960,
+  "updates": 960
+}

@@ -1,0 +1,8 @@
+{
+  "algo": "reinforce",
+  "name": "episodes_64",
+  "factor": "many episodes per update",
+  "seed": 0,
+  "total_steps": 40000,
+  "episodes_per_update": 64
+}

@@ -1,0 +1,8 @@
+{
+  "algo": "dqn",
+  "name": "lr_1e-4",
+  "factor": "learning rate down",
+  "seed": 0,
+  "total_steps": 40000,
+  "lr": 0.0001
+}

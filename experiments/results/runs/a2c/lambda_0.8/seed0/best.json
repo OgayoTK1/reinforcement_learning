@@ -1,0 +1,30 @@
+{
+  "algo": "a2c",
+  "hidden": 128,
+  "depth": 2,
+  "activation": "tanh",
+  "config": {
+    "lr": 0.0007,
+    "gamma": 0.99,
+    "lmbda": 0.8,
+    "ent_coef": 0.01,
+    "critic_coef": 0.5,
+    "frames_per_batch": 128,
+    "hidden": 128,
+    "depth": 2,
+    "activation": "tanh",
+    "max_grad_norm": 0.5,
+    "eval_every_frac": 0.1,
+    "algo": "a2c",
+    "name": "lambda_0.8",
+    "factor": "lower GAE lambda",
+    "seed": 0,
+    "total_steps": 40000
+  },
+  "step": 36096,
+  "val_return": -0.02967403084130535,
+  "obs_dim": 65,
+  "n_actions": 20,
+  "spec_hash": "df42fd8c1dd5",
+  "env_version": "1.0"
+}

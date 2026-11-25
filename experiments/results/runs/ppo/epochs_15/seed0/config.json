@@ -1,0 +1,8 @@
+{
+  "algo": "ppo",
+  "name": "epochs_15",
+  "factor": "more epochs per batch",
+  "seed": 0,
+  "total_steps": 40000,
+  "epochs": 15
+}

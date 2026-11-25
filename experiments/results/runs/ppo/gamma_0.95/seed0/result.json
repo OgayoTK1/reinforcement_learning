@@ -1,0 +1,13 @@
+{
+  "algo": "ppo",
+  "name": "gamma_0.95",
+  "factor": "shorter horizon",
+  "seed": 0,
+  "total_steps": 40000,
+  "gamma": 0.95,
+  "status": "ok",
+  "train_seconds": 105.1,
+  "best_val_return": -0.08612058465784274,
+  "steps": 40960,
+  "updates": 960
+}

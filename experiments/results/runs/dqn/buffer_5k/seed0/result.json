@@ -1,0 +1,13 @@
+{
+  "algo": "dqn",
+  "name": "buffer_5k",
+  "factor": "small replay buffer",
+  "seed": 0,
+  "total_steps": 40000,
+  "buffer_size": 5000,
+  "status": "ok",
+  "train_seconds": 195.9,
+  "best_val_return": 0.028788212554237812,
+  "steps": 40000,
+  "updates": 9752
+}

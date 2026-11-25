@@ -1,0 +1,12 @@
+{
+  "algo": "dqn",
+  "name": "base",
+  "factor": "default",
+  "seed": 0,
+  "total_steps": 40000,
+  "status": "ok",
+  "train_seconds": 128.5,
+  "best_val_return": 0.014155008223424496,
+  "steps": 40000,
+  "updates": 9752
+}

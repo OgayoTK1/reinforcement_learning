@@ -1,0 +1,13 @@
+{
+  "algo": "a2c",
+  "name": "lr_1e-4",
+  "factor": "learning rate down",
+  "seed": 0,
+  "total_steps": 40000,
+  "lr": 0.0001,
+  "status": "ok",
+  "train_seconds": 86.0,
+  "best_val_return": -0.27019972685500293,
+  "steps": 40064,
+  "updates": 313
+}

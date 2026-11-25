@@ -1,0 +1,32 @@
+- name: base
+  factor: default
+- name: lr_1e-3
+  factor: learning rate up
+  lr: 0.001
+- name: lr_1e-4
+  factor: learning rate down
+  lr: 0.0001
+- name: gamma_0.95
+  factor: shorter horizon
+  gamma: 0.95
+- name: gamma_0.999
+  factor: longer horizon
+  gamma: 0.999
+- name: buffer_5k
+  factor: small replay buffer
+  buffer_size: 5000
+- name: batch_256
+  factor: larger minibatch
+  batch_size: 256
+- name: eps_fast
+  factor: fast exploration decay
+  eps_decay_frac: 0.15
+- name: eps_slow
+  factor: slow exploration decay, higher floor
+  eps_decay_frac: 0.8
+  eps_end: 0.1
+- name: hard_noDouble
+  factor: hard target copy, no double DQN
+  target: hard
+  hard_every: 500
+  double_dqn: false

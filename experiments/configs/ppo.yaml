@@ -1,0 +1,30 @@
+- name: base
+  factor: default
+- name: lr_1e-3
+  factor: learning rate up
+  lr: 0.001
+- name: lr_1e-4
+  factor: learning rate down
+  lr: 0.0001
+- name: gamma_0.95
+  factor: shorter horizon
+  gamma: 0.95
+- name: clip_0.1
+  factor: tighter clip
+  clip_eps: 0.1
+- name: clip_0.3
+  factor: looser clip
+  clip_eps: 0.3
+- name: entropy_0.05
+  factor: entropy bonus up
+  ent_coef: 0.05
+- name: epochs_15
+  factor: more epochs per batch
+  epochs: 15
+- name: batch_512
+  factor: short rollouts, small minibatch
+  frames_per_batch: 512
+  minibatch: 64
+- name: lambda_0.8
+  factor: lower GAE lambda
+  lmbda: 0.8

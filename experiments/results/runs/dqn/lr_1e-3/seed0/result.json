@@ -1,0 +1,13 @@
+{
+  "algo": "dqn",
+  "name": "lr_1e-3",
+  "factor": "learning rate up",
+  "seed": 0,
+  "total_steps": 40000,
+  "lr": 0.001,
+  "status": "ok",
+  "train_seconds": 121.0,
+  "best_val_return": -0.05590589599024795,
+  "steps": 40000,
+  "updates": 9752
+}

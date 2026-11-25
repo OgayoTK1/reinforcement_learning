@@ -1,0 +1,8 @@
+{
+  "algo": "ppo",
+  "name": "lr_1e-3",
+  "factor": "learning rate up",
+  "seed": 0,
+  "total_steps": 40000,
+  "lr": 0.001
+}

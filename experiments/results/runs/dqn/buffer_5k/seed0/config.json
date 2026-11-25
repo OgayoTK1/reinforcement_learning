@@ -1,0 +1,8 @@
+{
+  "algo": "dqn",
+  "name": "buffer_5k",
+  "factor": "small replay buffer",
+  "seed": 0,
+  "total_steps": 40000,
+  "buffer_size": 5000
+}

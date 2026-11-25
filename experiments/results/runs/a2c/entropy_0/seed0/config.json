@@ -1,0 +1,8 @@
+{
+  "algo": "a2c",
+  "name": "entropy_0",
+  "factor": "no entropy bonus",
+  "seed": 0,
+  "total_steps": 40000,
+  "ent_coef": 0.0
+}

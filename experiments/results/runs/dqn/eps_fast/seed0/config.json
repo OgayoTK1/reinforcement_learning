@@ -1,0 +1,8 @@
+{
+  "algo": "dqn",
+  "name": "eps_fast",
+  "factor": "fast exploration decay",
+  "seed": 0,
+  "total_steps": 40000,
+  "eps_decay_frac": 0.15
+}

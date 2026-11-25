@@ -1,0 +1,8 @@
+{
+  "algo": "a2c",
+  "name": "nstep_512",
+  "factor": "long rollouts",
+  "seed": 0,
+  "total_steps": 40000,
+  "frames_per_batch": 512
+}

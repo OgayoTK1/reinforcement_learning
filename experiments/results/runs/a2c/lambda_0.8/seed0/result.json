@@ -1,0 +1,13 @@
+{
+  "algo": "a2c",
+  "name": "lambda_0.8",
+  "factor": "lower GAE lambda",
+  "seed": 0,
+  "total_steps": 40000,
+  "lmbda": 0.8,
+  "status": "ok",
+  "train_seconds": 101.1,
+  "best_val_return": -0.02967403084130535,
+  "steps": 40064,
+  "updates": 313
+}

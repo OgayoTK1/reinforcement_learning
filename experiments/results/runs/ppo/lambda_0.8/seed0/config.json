@@ -1,0 +1,8 @@
+{
+  "algo": "ppo",
+  "name": "lambda_0.8",
+  "factor": "lower GAE lambda",
+  "seed": 0,
+  "total_steps": 40000,
+  "lmbda": 0.8
+}

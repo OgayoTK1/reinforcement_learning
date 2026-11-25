@@ -1,0 +1,13 @@
+{
+  "algo": "ppo",
+  "name": "epochs_15",
+  "factor": "more epochs per batch",
+  "seed": 0,
+  "total_steps": 40000,
+  "epochs": 15,
+  "status": "ok",
+  "train_seconds": 145.2,
+  "best_val_return": 0.13372787894178126,
+  "steps": 40960,
+  "updates": 2400
+}

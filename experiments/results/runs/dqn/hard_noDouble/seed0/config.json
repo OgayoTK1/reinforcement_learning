@@ -1,0 +1,10 @@
+{
+  "algo": "dqn",
+  "name": "hard_noDouble",
+  "factor": "hard target copy, no double DQN",
+  "seed": 0,
+  "total_steps": 40000,
+  "target": "hard",
+  "hard_every": 500,
+  "double_dqn": false
+}

@@ -1,0 +1,7 @@
+{
+  "algo": "a2c",
+  "name": "base",
+  "factor": "default",
+  "seed": 0,
+  "total_steps": 40000
+}

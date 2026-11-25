@@ -1,0 +1,13 @@
+{
+  "algo": "reinforce",
+  "name": "entropy_0.05",
+  "factor": "entropy bonus up",
+  "seed": 0,
+  "total_steps": 40000,
+  "ent_coef": 0.05,
+  "status": "ok",
+  "train_seconds": 92.8,
+  "best_val_return": -0.26948854384904086,
+  "steps": 40056,
+  "updates": 67
+}

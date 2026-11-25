@@ -1,0 +1,14 @@
+{
+  "algo": "reinforce",
+  "name": "no_baseline",
+  "factor": "raw returns, no baseline",
+  "seed": 0,
+  "total_steps": 40000,
+  "baseline": "none",
+  "normalize": false,
+  "status": "ok",
+  "train_seconds": 84.7,
+  "best_val_return": -0.24772210626577124,
+  "steps": 40514,
+  "updates": 71
+}

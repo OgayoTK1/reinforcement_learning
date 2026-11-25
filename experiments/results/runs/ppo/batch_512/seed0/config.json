@@ -1,0 +1,9 @@
+{
+  "algo": "ppo",
+  "name": "batch_512",
+  "factor": "short rollouts, small minibatch",
+  "seed": 0,
+  "total_steps": 40000,
+  "frames_per_batch": 512,
+  "minibatch": 64
+}

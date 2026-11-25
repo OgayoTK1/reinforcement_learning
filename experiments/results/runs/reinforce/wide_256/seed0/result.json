@@ -1,0 +1,13 @@
+{
+  "algo": "reinforce",
+  "name": "wide_256",
+  "factor": "wider network",
+  "seed": 0,
+  "total_steps": 40000,
+  "hidden": 256,
+  "status": "ok",
+  "train_seconds": 97.2,
+  "best_val_return": -0.3103429092042371,
+  "steps": 40611,
+  "updates": 60
+}

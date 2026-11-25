@@ -1,0 +1,13 @@
+{
+  "algo": "a2c",
+  "name": "gamma_0.999",
+  "factor": "longer horizon",
+  "seed": 0,
+  "total_steps": 40000,
+  "gamma": 0.999,
+  "status": "ok",
+  "train_seconds": 96.8,
+  "best_val_return": 0.12513151185039598,
+  "steps": 40064,
+  "updates": 313
+}

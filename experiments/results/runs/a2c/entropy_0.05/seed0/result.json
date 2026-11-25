@@ -1,0 +1,13 @@
+{
+  "algo": "a2c",
+  "name": "entropy_0.05",
+  "factor": "entropy bonus up",
+  "seed": 0,
+  "total_steps": 40000,
+  "ent_coef": 0.05,
+  "status": "ok",
+  "train_seconds": 108.7,
+  "best_val_return": 0.18651394435854965,
+  "steps": 40064,
+  "updates": 313
+}

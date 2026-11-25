@@ -1,0 +1,14 @@
+{
+  "algo": "dqn",
+  "name": "eps_slow",
+  "factor": "slow exploration decay, higher floor",
+  "seed": 0,
+  "total_steps": 40000,
+  "eps_decay_frac": 0.8,
+  "eps_end": 0.1,
+  "status": "ok",
+  "train_seconds": 119.5,
+  "best_val_return": -0.07474374597498498,
+  "steps": 40000,
+  "updates": 9752
+}

@@ -1,0 +1,13 @@
+{
+  "algo": "ppo",
+  "name": "entropy_0.05",
+  "factor": "entropy bonus up",
+  "seed": 0,
+  "total_steps": 40000,
+  "ent_coef": 0.05,
+  "status": "ok",
+  "train_seconds": 108.5,
+  "best_val_return": -0.0032165379772123724,
+  "steps": 40960,
+  "updates": 960
+}

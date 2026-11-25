@@ -1,0 +1,8 @@
+{
+  "algo": "a2c",
+  "name": "gamma_0.95",
+  "factor": "shorter horizon",
+  "seed": 0,
+  "total_steps": 40000,
+  "gamma": 0.95
+}

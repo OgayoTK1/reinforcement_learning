@@ -1,0 +1,29 @@
+- name: base
+  factor: default
+- name: lr_3e-3
+  factor: learning rate up
+  lr: 0.003
+- name: lr_1e-4
+  factor: learning rate down
+  lr: 0.0001
+- name: gamma_0.95
+  factor: shorter horizon
+  gamma: 0.95
+- name: gamma_0.999
+  factor: longer horizon
+  gamma: 0.999
+- name: entropy_0.05
+  factor: entropy bonus up
+  ent_coef: 0.05
+- name: entropy_0
+  factor: no entropy bonus
+  ent_coef: 0.0
+- name: nstep_32
+  factor: very short rollouts
+  frames_per_batch: 32
+- name: nstep_512
+  factor: long rollouts
+  frames_per_batch: 512
+- name: lambda_0.8
+  factor: lower GAE lambda
+  lmbda: 0.8

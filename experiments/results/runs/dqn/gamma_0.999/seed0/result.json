@@ -1,0 +1,13 @@
+{
+  "algo": "dqn",
+  "name": "gamma_0.999",
+  "factor": "longer horizon",
+  "seed": 0,
+  "total_steps": 40000,
+  "gamma": 0.999,
+  "status": "ok",
+  "train_seconds": 120.9,
+  "best_val_return": -0.05190521638072422,
+  "steps": 40000,
+  "updates": 9752
+}

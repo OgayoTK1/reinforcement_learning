@@ -1,0 +1,8 @@
+{
+  "algo": "reinforce",
+  "name": "entropy_0.05",
+  "factor": "entropy bonus up",
+  "seed": 0,
+  "total_steps": 40000,
+  "ent_coef": 0.05
+}

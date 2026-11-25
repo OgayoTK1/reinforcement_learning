@@ -1,5 +1,5 @@
 [project]
-name = "hamed-rl-summative"
+name = "andrew-rl-summative"
 version = "0.1.0"
 description = "AgriResilience RL: smallholder maize farm management in Njoro, Nakuru County, with DQN, REINFORCE, PPO and A2C"
 readme = "README.md"

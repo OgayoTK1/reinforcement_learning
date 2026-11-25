@@ -152,7 +152,7 @@ def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo An
     footer_page_numbers(d, "AgriResilience RL: Reinforcement Learning Summative")
     para(d, "AFRICAN LEADERSHIP UNIVERSITY   |   BSE   |   ML TECHNIQUES II   |   SUMMATIVE ASSIGNMENT", bold=True, size=8, after=1)
     para(d, "Reinforcement Learning Summative Assignment Report", bold=True, size=15, after=1)
-    para(d, f"**Student Name:** {student}      **Video Recording:** {video}      **GitHub Repository:** {repo} (hamed_rl_summative)", size=8.5, after=2)
+    para(d, f"**Student Name:** {student}      **Video Recording:** {video}      **GitHub Repository:** {repo} (andrew_rl_summative)", size=8.5, after=2)
 
     # ------------------------------------------------------------------ 1
     d.add_heading("1. Project Overview", 1)

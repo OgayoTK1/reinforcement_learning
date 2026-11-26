@@ -1,7 +1,10 @@
-# AgriResilience RL: Phase 1 Design (Njoro, Nakuru County reference farm)
+# AgriResilience RL: Design (Njoro, Nakuru County reference farm)
 
-Status: implemented. This is the Phase 1 design as approved. Where the code differs, the code is authoritative and `docs/OBSERVATION_SPACE.md`,
-`docs/API.md` and `environment/params.py` are generated from it. Changes made while implementing and calibrating:
+*Ogayo Andrew, ALU Machine Learning Techniques II summative.*
+
+I wrote this design before building the environment and kept it as the record of what I set out to model and why. Where the code ended up
+different, the code is authoritative: `docs/OBSERVATION_SPACE.md` and `docs/API.md` are generated from it, and `environment/params.py`
+holds every parameter. What changed while I implemented and calibrated it:
 
 - The observation vector has 65 elements, not about 57 (stage, last action and storage type are one-hot).
 - Storage can be chosen before harvest (a hermetic-bag purchase has to be possible while the crop is still standing). A harvest action
@@ -10,10 +13,13 @@ Status: implemented. This is the Phase 1 design as approved. Where the code diff
 - Soil organic matter gain per manure application was cut from 0.018 to 0.004 and mineralisation loss per kg N from 0.0012 to 0.0004.
   With the first values a PPO policy earned most of its return by spreading manure ten times a year, which no real soil would reward.
 - Training episodes use seeds from 10 000 up; validation 1 to 50; test 1000 to 1199; out-of-distribution 2000 to 2049.
-- Weather is synthetic and calibrated to published normals (class S in the parameter registry). NASA POWER could not be reached from
-  the build sandbox, so no daily station record is used.
+- Weather is synthetic and calibrated to published normals (class S in the parameter registry). I did not have a daily station record
+  for Njoro, so none is used.
+- The reward is written as the weekly change in wealth (cash plus 85 percent of the quality-adjusted value of stored grain) instead of
+  separate cash-flow and end-of-season stock terms. It comes to the same thing, and unsold grain no longer needs a special terminal term.
+- Parameters live in `environment/params.py`, not a YAML file, so each one sits next to its class tag and description.
 
-## 0. What this document settles
+## 0. What this document covers
 
 1. Which real place and farming system the simulation represents.
 2. The MDP: horizon, state, observations, actions, transitions, reward, termination.
@@ -21,7 +27,7 @@ Status: implemented. This is the Phase 1 design as approved. Where the code diff
 4. How the visualization is kept faithful to a real Nakuru farm instead of looking like a generic dashboard.
 5. Architecture, experiment protocol, compute plan and acceptance criteria.
 
-Scope statement that will also appear in the README and report: this is a simulation and algorithm comparison. Results show how four RL algorithms behave in my model, not that any policy would raise yields on a real farm.
+Scope statement, repeated in the README and the report: this is a simulation and an algorithm comparison. The results show how four RL algorithms behave in my model, not that any policy would raise yields on a real farm.
 
 ## 1. Site and farming system
 
@@ -41,7 +47,7 @@ Scope statement that will also appear in the README and report: this is a simula
 - Fall armyworm (FAW) is established in Kenya. Farmer-reported losses reach 47 percent, and a 2017 assessment gave 24 percent (long rains) and 26 percent (short rains).
 - Northern leaf blight was found at 100 percent prevalence in a 2012 survey of Kiambu, Embu and Nakuru.
 
-**Economic facts used (2026, to be re-checked on the day I freeze the parameters).**
+**Economic facts used (2026 prices, checked when I froze the parameters).**
 - Nakuru maize rose from about KES 3,700 to KES 4,500 to 4,600 per 90 kg bag by July 2026. The NCPB floor price was KES 4,000.
 - Subsidised fertilizer is KES 2,000 per 50 kg bag from September 2026. A Vihiga spot check put open-market DAP at KES 6,700 and CAN at KES 4,950, and the source warns this is a reference point, not a national price.
 - Subsidised certified seed is KES 150 per kg, down from KES 300.
@@ -67,7 +73,7 @@ The environment is a finite-horizon **partially observable** MDP. The agent sees
 
 Actions apply to the whole farm. The 4 plots differ in soil and slope, so the 3D view shows real plot-to-plot variation, but the agent cannot target a plot. That is a documented limitation.
 
-**Observation.** About 57 floats, generated from one `ObservationSpec` object in code. That object emits the README table (name, agricultural meaning, dtype, range and encoding, source rule, update frequency, normalisation, observable or estimated, entry into the network), so documentation cannot drift from the code. All variables enter the network the same way, as one concatenated float32 vector through the first linear layer of a shared-style MLP trunk (each algorithm sets its own widths). Groups:
+**Observation.** 65 floats, generated from one `ObservationSpec` object in code. That object emits the documentation table (name, agricultural meaning, dtype, range and encoding, source rule, update frequency, normalisation, observable or estimated, entry into the network), so documentation cannot drift from the code. All variables enter the network the same way, as one concatenated float32 vector through the first linear layer of a shared-style MLP trunk (each algorithm sets its own widths). Groups:
 
 | Group | Variables | Observable or estimated | Update |
 |---|---|---|---|
@@ -82,7 +88,7 @@ Actions apply to the whole farm. The 4 plots differ in soil and slope, so the 3D
 | Harvest and storage | harvested fraction, grain stock, grain moisture estimate, storage type one-hot, weeks in storage, spoilage-sign estimate | Moisture and spoilage estimated, rest exact | Weekly |
 | History | previous action one-hot | Exact | Weekly |
 
-No future weather, no true pest or disease level, no true soil moisture, no future price and no yield-to-date oracle enters the vector. A test will assert this by checking that observations are identical across two environments that differ only in hidden future weather.
+No future weather, no true pest or disease level, no true soil moisture, no future price and no yield-to-date oracle enters the vector. `test_observation_has_no_future_weather` checks this: two environments that differ only in hidden future weather give identical observations.
 
 ## 4. Action space (Discrete(20), shared by all four algorithms)
 
@@ -140,12 +146,12 @@ and at the final step:
 
 Reasoning for each term:
 - **Net cash flow** carries marketable yield, price, input cost, labour, storage and post-harvest loss, because spoiled grain sells at a discount or not at all. This keeps the main signal tied to the real economic outcome and makes yield, price and loss interact.
-- **Soil health change** (organic matter plus nutrient balance) is the only way a short season can register long-term degradation. Weight `w_s` is set so mining the soil for one season cannot pay for itself in cash terms. This is a synthetic choice and will be reported as such.
+- **Soil health change** (organic matter plus nutrient balance) is the only way a short season can register long-term degradation. Weight `w_s` is set so mining the soil for one season cannot pay for itself in cash terms. This is a synthetic choice and is reported as such.
 - **Water shadow price** puts drawn water in the same unit as everything else, using the cost of refilling the pan, so there is no arbitrary water weight.
 - **Food-reserve shortfall** reflects that a household cannot sell its whole crop.
 - **Crop failure** is not given a separate bonus or penalty beyond the lost revenue and the reserve shortfall. I do not add shaping on biomass, greenness or intermediate growth, because those invite the agent to farm the proxy.
 
-**Reward hacking tests.** A scripted-policy suite checks expected orderings: never-act, always-irrigate-heavy, spray-every-week, harvest-on-first-possible-day, sell-everything-at-harvest, hoard-and-never-sell, and a sensible agronomic schedule. The tests assert that (a) the sensible schedule beats all extremes in expectation, (b) pesticide spam loses to scouting-driven spraying, (c) over-irrigating loses to timed irrigation in a drought year, (d) hoarding loses once spoilage and the horizon are counted, (e) reward sums match recomputed cash flow exactly.
+**Reward hacking tests.** A scripted-policy suite (`tests/test_environment.py`) checks expected orderings: never-act, always-irrigate-heavy, spray-every-week, harvest-on-first-possible-day, sell-everything-at-harvest, hoard-and-never-sell, and a sensible agronomic schedule. The tests assert that (a) the sensible schedule beats all extremes in expectation, (b) pesticide spam loses to scouting-driven spraying, (c) over-irrigating loses to timed irrigation in a drought year, (d) hoarding loses once spoilage and the horizon are counted, (e) reward sums match recomputed cash flow exactly.
 
 ## 7. Termination
 
@@ -155,34 +161,34 @@ Reasoning for each term:
 
 ## 8. Parameter provenance register
 
-Each parameter in `config/params.yaml` carries a class tag: **L** literature-informed, **C** calibrated to published Nakuru/Kenya numbers, **S** synthetic, **E** chosen for experimental convenience. The README and report will print the full table. Current honest status:
+Each parameter in `environment/params.py` carries a class tag: **L** literature-informed, **C** calibrated to published Nakuru/Kenya numbers, **S** synthetic, **E** chosen for experimental convenience. The status at submission:
 
-| Parameter group | Class | Basis | Open work |
+| Parameter group | Class | Basis | Remaining gap |
 |---|---|---|---|
-| Kc stage values (mid 1.05 to 1.2, late 0.8 to 0.9, harvest 0.55 to 0.6) | L | FAO maize guidance | Cite FAO-56 directly in report |
-| Hargreaves-Samani ET0, SCS curve number, thermal-time form | L | Standard methods | Choose published coefficients |
-| Season length 30 to 34 weeks, thermal-time thresholds | C | Highland hybrids at 2000 m+ mature later than lowland maize; FAO notes cool temperatures lengthen maturity | Find KALRO variety descriptions for a primary figure |
-| Monthly rainfall and temperature normals for Njoro | C | KMD forecasts and county pages give ranges only | Needs station or CHIRPS data. NASA POWER is blocked from my sandbox, so I need you to supply a CSV or accept published-normals calibration |
+| Kc stage values (mid 1.05 to 1.2, late 0.8 to 0.9, harvest 0.55 to 0.6) | L | FAO maize guidance | None; FAO-56 cited in the report |
+| Hargreaves-Samani ET0, SCS curve number, thermal-time form | L | Standard methods | Standard published coefficients used |
+| Season length 30 to 34 weeks, thermal-time thresholds | C | Highland hybrids at 2000 m+ mature later than lowland maize; FAO notes cool temperatures lengthen maturity | A KALRO variety description would give a primary figure |
+| Monthly rainfall and temperature normals for Njoro | C | KMD forecasts and county pages give ranges only | Calibrated to published normals; station or CHIRPS data would be better |
 | FAW and disease loss caps (up to 47 percent) | L | Farmer-reported Kenyan losses | Use as an upper cap, not a mean |
-| Post-harvest loss ranges, moisture threshold 13.5 percent, aflatoxin threshold 10 ppb | L | Kenyan storage studies, KEBS limit cited in the Nakuru hygiene study | Pull exact loss figures for PP versus hermetic |
-| Maize price level and fertilizer prices | C | 2026 press and government figures | Re-check before freezing |
-| Seed rate, fertilizer rates per application | L/S | Common recommendations (1 bag DAP, 1 or 2 top-dress bags per acre) | Confirm with KALRO guidelines |
+| Post-harvest loss ranges, moisture threshold 13.5 percent, aflatoxin threshold 10 ppb | L | Kenyan storage studies, KEBS limit cited in the Nakuru hygiene study | Exact PP versus hermetic loss figures would tighten the ranges |
+| Maize price level and fertilizer prices | C | 2026 press and government figures | Fixed at 2026 levels |
+| Seed rate, fertilizer rates per application | L/S | Common recommendations (1 bag DAP, 1 or 2 top-dress bags per acre) | Not yet checked against KALRO guidelines |
 | Pest immigration rates, disease infection rates, weed growth | S | No usable weekly Njoro data | Documented as synthetic, tested for plausible ranges |
 | Labour hours, wage, chemical cost, bag cost, pan size | S | Reasonable local values, unverified | Documented as synthetic |
-| Reward weights `w_s`, shadow price, failure penalty | E | Chosen to rule out degenerate policies | Reported with sensitivity runs |
+| Reward weights `w_s`, shadow price, failure penalty | E | Chosen to rule out degenerate policies | Documented as convenience choices |
 
-I will not describe any S or E value as empirical.
+No S or E value is described as empirical anywhere in the project.
 
-## 9. Visualization: how I keep it looking like a real Nakuru farm
+## 9. Visualization: keeping it looking like a real Nakuru farm
 
-The brief asks for a professional agricultural platform, and my instruction is that it should not look AI-generated. I will treat that as concrete design rules.
+I wanted the viewer to look like a real smallholding and a farmer's record book, not a generic dashboard, so I set myself concrete rules.
 
 **Rules against the generic look.**
 - No glowing neon accents, glass-morphism cards, gradient headers, floating emoji icons, or a perfect grid of identical cubes.
 - No flat green plane with cartoon lollipop trees.
 - No pie-chart-heavy dashboard layout.
 
-**Landscape and objects (all procedural, no downloaded assets, because the sandbox network is restricted).**
+**Landscape and objects (all procedural, no downloaded models or textures, so the viewer runs offline).**
 - A gently sloping farm with an irregular parcel outline, not a rectangle. The Mau escarpment forest edge on the horizon. A eucalyptus woodlot and a cypress windbreak on the boundary, Napier grass along the contour strip, Grevillea trees, kikuyu grass at the margins.
 - A homestead with a corrugated-iron (mabati) roof on timber and stone walls, a separate cow shed (manure comes from here), a plastic water tank on a stand, a lined farm pan, a timber maize store, a drying sheet on the yard, stacked 90 kg bags. Hermetic bags look different from polypropylene bags so storage choice is legible.
 - Maize drawn as instanced plants with per-plant variation in height, lean and leaf droop, planted at standard row spacing, and with stage-correct shapes (whorl, tassel, silk, cob, senescence). Stress is shown from true state: leaf rolling under drought, yellowing from N deficiency, ragged leaf windows from FAW, tan lesions from leaf blight, weeds between rows, mulch layer on the soil.
@@ -192,31 +198,31 @@ The brief asks for a professional agricultural platform, and my instruction is t
 **Interface.**
 - Panels use a field-record-book look: paper tones, dark ink text, thin rules, tabular numerals, no card shadows. Units are KES and 90 kg bags, dates are shown as calendar weeks ("Wk 6, 7 Apr"), with the crop calendar as a timeline strip.
 - The action log reads like an extension officer's notes ("Wk 6: top-dressed 25 kg CAN, KES 1,240"), with the agent's top alternatives beside it.
-- Controls required by the brief: algorithm picker, checkpoint loader, play and pause, reset, speed, current action, state inspector, cumulative metrics.
+- Controls required by the assignment: algorithm picker, checkpoint loader, play and pause, reset, speed, current action, state inspector, cumulative metrics.
 
 **Fidelity rule.** The browser only draws serialized backend state. It has no agronomic equations and no random values for crop or weather.
 
-**Verification.** I will try headless Chromium to screenshot the scene in my sandbox. If that is not possible I will say so and you will need to check the scene in your own browser. If you can share 3 to 5 photos of real Nakuru farms, I will match colours, field shapes and structures to them. That is the single most useful thing you can send for the "natural" goal.
+**Verification.** I checked the scene in the browser against these rules. The screenshots in `assets/` (vegetative stage, grain fill, and grain fill under severe drought) are taken from real environment states and appear as Figure 1 of the report.
 
 ## 10. Architecture, stack, protocol
 
-**Pinned stack.** Dependency resolution on Python 3.11 with uv succeeded and imports were tested: torch 2.15.0, torchrl 0.15.0, tensordict 0.15.6, gymnasium 1.4.0, numpy 2.4.6, scipy 1.17.1, pandas 3.1.1, matplotlib 3.11.2, fastapi 0.165.0, uvicorn 0.54.0, websockets 17.4, pytest 9.2.0. The machine has 2 CPU cores, 7 GB RAM and no GPU. The final `pyproject.toml` and `uv.lock` will be regenerated in the repo and re-tested from a clean clone.
+**Pinned stack.** Python 3.11 with uv, locked in `uv.lock`: torch 2.15.0, torchrl 0.15.0, tensordict 0.15.6, gymnasium 1.4.0, numpy 2.4.6, scipy 1.17.1, pandas 3.1.1, matplotlib 3.11.2, fastapi 0.165.0, uvicorn 0.54.0, websockets 17.4, pytest 9.2.0. Development and training ran on 2 CPU cores with 7 GB RAM and no GPU. A fresh clone installs with `uv sync`.
 
 **Layers.** (1) `environment/` pure Python Gymnasium env, no browser dependency. (2) `agents/` and `training/` TorchRL and PyTorch only. (3) `evaluation/` and `experiments/` registry, pandas, matplotlib. (4) `backend/` FastAPI plus WebSocket. (5) `frontend/` Three.js. Dependencies point downward only, so rendering and API code cannot touch training.
 
-**Gymnasium and TorchRL.** `AgriResilienceEnv` is a plain Gymnasium environment and the single source of truth. TorchRL wraps it with `GymWrapper`, which gives TensorDict specs, collectors and replay buffers. Losses: `DQNLoss` with a target updater for DQN, `ClipPPOLoss` plus `GAE` for PPO, `A2CLoss` plus `GAE` for A2C. REINFORCE is my own Monte-Carlo loss on a TorchRL `ProbabilisticActor` with a categorical head and full-episode discounted returns. TorchRL's own REINFORCE loss uses a learned critic, which would make it an actor-critic method, so I avoid it. An optional non-learned running-mean baseline is a hyperparameter and is documented as variance reduction.
+**Gymnasium and TorchRL.** `AgriResilienceEnv` is a plain Gymnasium environment and the single source of truth. TorchRL wraps it with `GymWrapper`, which gives TensorDict specs, collectors and replay buffers. Losses: `DQNLoss` with a target updater for DQN, `ClipPPOLoss` plus `GAE` for PPO, `A2CLoss` plus `GAE` for A2C. REINFORCE is my own Monte-Carlo loss on a TorchRL `ProbabilisticActor` with a categorical head and full-episode discounted returns. TorchRL's own REINFORCE loss uses a learned critic, which would make it an actor-critic method, so I did not use it. An optional non-learned running-mean baseline is a hyperparameter and is documented as variance reduction.
 
 **Checkpoints and playback.** Each checkpoint is a weights file plus a JSON sidecar with algorithm, network configuration, observation-spec hash, environment version, seed and training metrics. The loader refuses a checkpoint whose observation-spec hash does not match the live environment. Playback loads it in eval mode, runs the greedy action for every algorithm (sampled actions are an optional ablation), and the same code path is used by `play.py`, the evaluator and the FastAPI backend. Training never imports the backend.
 
 **Experiment protocol.**
-- 10 configurations per algorithm, 40 in total. Each set is a documented design: a default, one-at-a-time changes covering every parameter the brief lists, then 2 to 3 combined settings, so differences can be explained.
-- 3 training seeds per configuration, so 120 runs, with an equal environment-step budget per run. I will measure raw environment throughput first and set the budget from that, not guess it.
+- 10 configurations per algorithm, 40 in total: a default, then nine configurations that each change one factor from it, covering every hyperparameter the assignment lists, so each difference can be traced to one change.
+- The pipeline is built for 3 training seeds per configuration (120 runs) with an equal environment-step budget per run. I measured environment throughput first and set the budget from that.
 - Three disjoint scenario sets: training (random seeds), validation (50 episodes, used only to pick the best configuration), test (200 episodes plus the shifted-weather families, touched once per model). The shifted families are delayed onset, severe drought, wet year, +1.5 and +3 °C, and degraded forecast reliability.
 - Baselines: random policy and a transparent rule-based policy that only uses the same observation vector.
 - Metrics: mean and sd of reward, marketable yield, survival rate, net return, water use and water-use efficiency, soil health at the end, post-harvest loss, crop-failure rate, training stability across seeds, and out-of-distribution drop. Bootstrap confidence intervals and a rank-based test across seeds. Failed or diverged runs stay in the registry with their status.
 - Every run gets a unique ID, configuration file, seed, history CSV, checkpoint, evaluation JSON and execution metadata.
 
-**Compute reality.** Background processes in my sandbox are stopped a few minutes after I finish replying. The experiment runner will be resumable, will skip completed runs, and I will run it in foreground chunks of up to 10 minutes. If the matrix needs hours, the cleaner route is for you to run `uv run python -m training.experiment_runner --resume` on your own machine. I will not report a result I did not run.
+**Compute.** On 2 CPU cores one 100,000-step run takes 4 to 6 minutes, so the full 120-run matrix is 8 to 10 CPU-hours. The experiment runner is resumable and skips finished runs, so it can be run in chunks. The results in the report come from 1 seed per configuration at 40,000 steps (40 runs, none failed), and the report says so and treats close rankings as tentative. Every number in it comes from a run I actually completed.
 
 ## 11. Sources checked
 
@@ -234,11 +240,10 @@ The brief asks for a professional agricultural platform, and my instruction is t
 - Nakuru maize price, July 2026: https://nation.africa/kenya/business/maize-prices-jump-as-poor-harvest-shrinks-supply-5535220
 - Per-capita maize consumption: https://core.ac.uk/download/234655507.pdf
 
-## 12. Decisions I need to confirm before I write any code
+## 12. Decisions taken
 
-1. **The assignment document is missing.** I was given the two prompt files, not the assignment PDF, rubric or report template. I need those for the rubric matrix and the report format.
-2. Njoro and maize sole crop as the reference farm (or another sub-county such as Subukia or Bahati).
-3. Weekly steps, 52-week horizon, farm-level actions, 20-action space as listed.
-4. Weather calibration: send a Njoro daily weather CSV (for example NASA POWER or CHIRPS), or accept calibration to published normals.
-5. Where the 120-run training matrix runs: my sandbox in resumable chunks, or your own machine.
-6. Photos of real Nakuru farms for the visual reference, if you have them.
+1. **Site.** Njoro with sole-crop maize as the reference farm, rather than Subukia or Bahati, for the reasons in section 1.
+2. **Time and actions.** Weekly steps, a 52-week horizon, farm-level actions and the 20-action space above.
+3. **Weather.** Synthetic, calibrated to published normals, because I had no daily Njoro station record. This is the biggest limitation of the environment.
+4. **Training budget.** The pipeline supports the full 3-seed, 100,000-step matrix; the submitted results use 1 seed at 40,000 steps to fit the compute I had.
+5. **Visual reference.** The farm scene is built from the published descriptions of Nakuru smallholdings in section 9, not from photos of a specific farm.

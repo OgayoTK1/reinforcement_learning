@@ -34,7 +34,7 @@ uv run play.py --policy rule_based --scenario severe_drought --seed 1001
 uv run play.py --list
 ```
 
-`models/` ships with checkpoints from a **reduced preview run** (see "Results provenance"). Retrain with the commands below for final numbers.
+`models/` holds the checkpoints selected for the report (see "Results provenance"). The commands below retrain them from scratch.
 
 ## Commands
 
@@ -132,8 +132,9 @@ docs/          DESIGN.md  ARCHITECTURE.md  API.md  OBSERVATION_SPACE.md  RUBRIC_
 
 ## Results provenance
 
-Numbers in the report come from `experiments/results/` and are rebuilt by `uv run main.py report`. The checkpoints that ship in `models/` and the preview
-figures come from a reduced run (1 seed, 40,000 steps per configuration) done during development; the report states the seeds and steps it was built from.
+Numbers in the report come from `experiments/results/` and are rebuilt by `uv run main.py report`. The submitted results, the checkpoints in `models/` and the
+figures come from 1 seed and 40,000 steps per configuration (40 runs, none failed), which is below the 3 seeds and 100,000 steps the pipeline supports;
+the report states this and treats close rankings as tentative.
 Nothing in the report is typed by hand except the prose around the numbers.
 
 ## Tests

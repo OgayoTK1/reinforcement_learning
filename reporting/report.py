@@ -16,6 +16,7 @@ from environment.params import P
 from experiments.matrix import _M
 
 from . import stats as S
+from .behaviour import invalid_profile, invalid_summary
 from .data import ALGO_LABEL, ALGOS, Results, full_config
 from .docx_helpers import figure, footer_page_numbers, new_document, para, table
 
@@ -99,19 +100,56 @@ def wait_floor() -> float:
     return _FLOOR["v"]
 
 
+def why(algo: str, name: str, gain: bool, steps: int) -> str:
+    """The mechanism behind a configuration's effect, worded for the direction it actually went."""
+    dflt = full_config(algo, "base")
+    eps_d = int(dflt.get("eps_decay_frac", 0.4) * steps)
+    eps_f = int(0.15 * steps)
+    harvest_w = 32
+    W = {
+        "lr_up": ("with a short budget, bigger steps reach a useful policy sooner", "bigger steps overshot and made updates erratic"),
+        "lr_down": ("smaller steps kept updates stable", "smaller steps learned too little within the budget"),
+        "gamma_0.95": ("a shorter horizon lowered the variance of the returns",
+                       f"at γ = 0.95 harvest and sale income about {harvest_w} weeks after sowing is weighted by {0.95 ** harvest_w:.2f}, so it barely reaches early decisions"),
+        "gamma_0.999": ("the late harvest and sale income keeps almost full weight in early decisions", "almost undiscounted 52-week returns are noisier to learn from"),
+        "buffer_5k": ("a small buffer holds only recent transitions, which match the current policy more closely", "a small buffer gives less varied, more correlated updates"),
+        "batch_256": ("larger minibatches gave lower-variance gradient steps", "larger minibatches with the same update ratio gave fewer effective updates per sample"),
+        "eps_fast": (f"ε reaches its floor after about {eps_f:,} steps instead of {eps_d:,}, leaving more of the budget to refine a policy",
+                     "exploration stopped before the agent had found the harvest-and-sell sequence"),
+        "eps_slow": ("longer exploration found more of the 20 actions' effects", "acting randomly for 80 percent of training with a 0.1 floor left little budget to exploit what was learned"),
+        "hard_noDouble": ("hard target copies passed value changes on faster", "without double DQN the max over 20 noisy Q-values overestimates, and hard copies make the targets jump"),
+        "episodes_4": ("four times as many updates in the same budget outweighed the noisier gradient", "four-episode batches gave too noisy a gradient"),
+        "episodes_64": ("64-episode batches gave a much less noisy gradient", f"64-episode batches allow only about {max(1, int(steps / 52 / 64))} updates in the whole budget"),
+        "entropy_up": ("a larger entropy bonus kept the policy exploring rather than settling early", "a larger entropy bonus kept the policy too random to commit"),
+        "entropy_0": ("without an entropy bonus the policy committed sooner", "without an entropy bonus the policy committed early to a poor action pattern"),
+        "no_baseline": ("raw returns happened to work here", "raw returns without a baseline give a much noisier gradient"),
+        "wide_256": ("the wider network fitted the stage-dependent decisions better", "the wider network needed more data than the budget gave"),
+        "clip_0.1": ("a tighter clip gave smaller, safer policy steps", "a tighter clip slowed learning within the budget"),
+        "clip_0.3": ("a looser clip let each batch move the policy further", "a looser clip let single batches push the policy too far"),
+        "epochs_15": ("more epochs squeezed more learning out of each batch", "15 epochs over-fitted each batch and moved the policy too far from the data"),
+        "batch_512": ("short rollouts give four times as many updates in the same budget", "short rollouts gave noisy advantage estimates"),
+        "lambda_0.8": ("lower λ cut the variance of the advantage estimates", "lower λ leans on a critic that is still inaccurate, so the advantages are biased"),
+        "nstep_32": ("very short rollouts give many more updates", "32-step rollouts gave noisy updates from less than one season of data"),
+        "nstep_512": ("long rollouts gave steadier advantage estimates", "long rollouts give far fewer updates in the budget"),
+    }
+    key = {"lr_1e-3": "lr_up", "lr_3e-3": "lr_up", "lr_1e-4": "lr_down", "lr_3e-4": "lr_down", "entropy_0.05": "entropy_up"}.get(name, name)
+    return W[key][0 if gain else 1] if key in W else ""
+
+
 def effects_text(R: Results, algo: str) -> str:
     reg = R.runs(algo)
     g = reg.groupby("name")["best_val_return"].mean()
     if "base" not in g.index or len(g) < 3:
         return ""
     base = g["base"]
-    fac = {n: f for n, _, f in _M[algo]}
+    steps = R.steps()
     diff = (g - base).drop("base").sort_values(ascending=False)
-    seed_sd = reg[reg["name"] == "base"]["best_val_return"].std()
-    noise = f" Across seeds the default itself varies by {seed_sd:.3f} (sd), so differences of that size are not evidence of an effect." if not np.isnan(seed_sd) else \
-        " With one seed per configuration I cannot separate a real effect from seed-to-seed noise, so I read these as leads, not findings."
-    best = [f"{n} ({fac[n]}; {sgn(v)})" for n, v in diff.head(2).items() if v > 0]
-    worst = [f"{n} ({fac[n]}; {sgn(v)})" for n, v in diff.tail(2).items() if v < 0]
+
+    def item(n, v):
+        w = why(algo, n, v > 0, steps)
+        return f"{n} ({sgn(v)}{'; ' + w if w else ''})"
+    best = [item(n, v) for n, v in diff.head(2).items() if v > 0]
+    worst = [item(n, v) for n, v in diff.tail(2)[::-1].items() if v < 0]
     stuck = int((g <= wait_floor() + 0.005).sum())
     s = (f"{stuck} of {len(g)} configurations never did better than a farmer who never sows (validation return {wait_floor():.3f}) within the budget. " if stuck else "")
     s += f"Against the default ({base:.3f}), "
@@ -119,7 +157,107 @@ def effects_text(R: Results, algo: str) -> str:
         s += "the largest gains were " + " and ".join(best) + ". "
     if worst:
         s += "The largest losses were " + " and ".join(worst) + "."
-    return s + noise
+    return s
+
+
+def sweep_summary(R: Results) -> str:
+    """Patterns across the four sweeps, and how much a single seed can be trusted."""
+    lr_down = {"dqn": "lr_1e-4", "reinforce": "lr_3e-4", "ppo": "lr_1e-4", "a2c": "lr_1e-4"}
+    lr_up = {"dqn": "lr_1e-3", "reinforce": "lr_3e-3", "ppo": "lr_1e-3", "a2c": "lr_3e-3"}
+    worst2, best2 = [], []
+    for a in ALGOS:
+        g = R.runs(a).groupby("name")["best_val_return"].mean()
+        if "base" in g.index:
+            dd = (g - g["base"]).drop("base").sort_values()
+            worst2 += [a for n in dd.head(2).index if n == lr_down[a]]
+            best2 += [a for n in dd.tail(2).index if n == lr_up[a]]
+    s = ""
+    if len(worst2) >= 3:
+        s += (f"Lowering the learning rate was one of the two worst changes for {len(worst2)} of 4 algorithms"
+              + (f", and raising it one of the two best for {len(best2)}" if len(best2) >= 2 else "")
+              + ". That points to the step budget, not instability, as the main limit on these runs. ")
+    n_seeds = R.n_seeds()
+    if n_seeds < 2:
+        s += "Each configuration has one seed, so I cannot separate an effect from seed-to-seed noise; I read single differences below about 0.1 as leads, not findings."
+    else:
+        sd = R.runs("dqn", "base")["best_val_return"].std()
+        s += f"Across seeds the DQN default itself varies by {sd:.3f} (sd), so differences of that size are not evidence of an effect."
+    return s
+
+
+def entropy_stats(R: Results, sel: dict) -> dict:
+    out = {}
+    for a in ["reinforce", "ppo", "a2c"]:
+        runs = R.runs(a, sel.get(a))
+        if not len(runs):
+            continue
+        u = R.table(runs.iloc[0].run_dir, "updates")
+        if "entropy" not in u or len(u) < 4:
+            continue
+        e = u.entropy.to_numpy()
+        i = int(np.argmin(e))
+        out[a] = dict(first=float(e[:3].mean()), last=float(e[-3:].mean()), lo=float(e[i]), lo_step=int(u.step.iloc[i]), hi=float(e.max()))
+    return out
+
+
+def entropy_text(R: Results, sel: dict) -> str:
+    parts = []
+    for a, s in entropy_stats(R, sel).items():
+        if s["lo"] < s["first"] - 0.5 and s["last"] > s["lo"] + 0.5:
+            parts.append(f"{L[a]}'s entropy collapsed from {s['first']:.2f} to {s['lo']:.2f} by step {s['lo_step']:,} and then climbed back to {s['last']:.2f}: the policy committed hard, "
+                         "the whole-episode returns that followed did not support that commitment, and it spread out again, which is the instability expected from a critic-free gradient")
+        elif s["last"] < s["first"] - 0.3:
+            parts.append(f"{L[a]}'s entropy fell steadily from {s['first']:.2f} to {s['last']:.2f}, a gradual move from exploring to a committed policy")
+        else:
+            parts.append(f"{L[a]}'s entropy stayed between {s['lo']:.2f} and {s['hi']:.2f} (ending at {s['last']:.2f}), as spread out as a uniform choice among about {np.exp(s['last']):.0f} actions, so the sampled policy never committed even though its greedy action did well")
+    return ". ".join(parts) + "." if parts else ""
+
+
+def convergence_text(conv: pd.DataFrame) -> str:
+    c = conv.groupby("algo")[["episodes", "converge_episode", "val_drawdown", "best_val", "last_val"]].mean().reindex([a for a in ALGOS if a in set(conv.algo)])
+    frac = (c.converge_episode / c.episodes).dropna()
+    s = ""
+    if len(frac) and frac.min() > 0.75:
+        s += (f"Every method reached this point only at {frac.min() * 100:.0f} to {frac.max() * 100:.0f} percent of its training episodes, so none had levelled off: the runs were still improving "
+              "when the budget ran out, and longer training would probably change the returns. ")
+    unstable = c[c.val_drawdown > 0.1].sort_values("val_drawdown", ascending=False)
+    if len(unstable):
+        s += ("The validation drawdown separates stable from unstable learners: "
+              + ", ".join(f"{L[a]} ended {r.val_drawdown:.3f} below its best ({r.best_val:.3f} to {r.last_val:.3f})" for a, r in unstable.iterrows()))
+        steady = [L[a] for a in c.index if c.loc[a, "val_drawdown"] < 0.01]
+        s += (f", while {' and '.join(steady)} finished at {'their' if len(steady) > 1 else 'its'} best. " if steady else ". ")
+        s += "Because the checkpoint used for testing is the best one on validation (`best.pt`), a late collapse does not reach the test results, but it shows how fragile those runs were."
+    return s
+
+
+def observed_text(R: Results, sel: dict, conv: pd.DataFrame, summ: pd.DataFrame) -> str:
+    """How far this run bore out those expectations, one clause per method, from the logged numbers."""
+    c = conv.groupby("algo")[["val_drawdown", "late_std"]].mean()
+    ent = entropy_stats(R, sel)
+    algos = [a for a in ALGOS if a in summ.index and a in c.index]
+    if not algos:
+        return ""
+    ret = summ.loc[algos, "return"]; dd = c.loc[algos, "val_drawdown"]; fail = summ.loc[algos, "crop_failure"]
+    bits = []
+    for a in algos:
+        r, e = ret[a], ent.get(a)
+        b = f"{L[a]} scored {r:.3f} on test"
+        if r == ret.max():
+            b += ", the best"
+        elif r == ret.min():
+            b += ", the weakest"
+        if dd[a] < 0.01:
+            b += ", and finished training at its best validation score"
+        else:
+            b += f", and its validation return fell {dd[a]:.3f} below its best by the end" + (", the least stable of the four" if dd[a] == dd.max() else "")
+        if fail[a] == fail.max() and fail[a] > fail.min() + 0.05:
+            b += f"; it had the most crop failures ({fail[a] * 100:.0f} percent)"
+        if e and e["lo"] < e["first"] - 0.5 and e["last"] > e["lo"] + 0.5:
+            b += f"; its entropy collapse and rebound ({e['first']:.2f} to {e['lo']:.2f} to {e['last']:.2f}) is the high-variance gradient showing up directly"
+        elif e and e["last"] < e["first"] - 0.3:
+            b += "; its entropy fell smoothly"
+        bits.append(b)
+    return "**In this run** " + "; ".join(bits) + ". With one seed per configuration these are observations about this run, not general rankings."
 
 
 def gap_text(summ, top: str) -> str:
@@ -169,8 +307,8 @@ def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo An
     # ------------------------------------------------------------------ 2
     d.add_heading("2. Environment Description", 1)
     d.add_heading("a. Agent(s)", 2)
-    para(d, "One agent: the household member who manages the plot. It stands for a smallholder who decides once per week, has about 56 hours of family labour per week "
-            "(extra hours are hired at KES 75), limited cash, a cow whose manure accumulates, and a lined water pan filled by rain. It cannot see soil nutrients, true "
+    para(d, f"One agent: the household member who manages the plot. It stands for a smallholder who decides once per week, has about {P.labour_cap_h:g} hours of family labour per week "
+            f"(extra hours are hired at KES {P.wage_h:g}), limited cash, a cow whose manure accumulates, and a lined water pan filled by rain. It cannot see soil nutrients, true "
             "pest numbers or next week's rain. It sees what a farmer can sense: a rain gauge, a thermometer, finger-test soil moisture, a visual canopy score, "
             "market prices, and a forecast whose skill varies by season. Scouting the field for one week of labour reduces the noise on pest and disease estimates.")
     d.add_heading("b. Action Space", 2)
@@ -186,11 +324,12 @@ def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo An
             "to the first linear layer. The same table is in `docs/OBSERVATION_SPACE.md`.", after=2)
     table(d, ["Observation", "Description", "Source (sensor/camera/API/dataset)", "Encoding / data type", "Range", "Update"], obs_rows(), [3.1, 4.4, 3.5, 3.1, 1.6, 1.7], size=6.6)
     d.add_heading("d. Reward Structure", 2)
-    para(d, "With W the farm's wealth (cash plus 85 percent of the quality-adjusted value of stored grain) and R0 = KES 88,000 the reference gross revenue, the reward each week is "
-            "**r_t = ΔW/R0 + 150,000·ΔSOM/R0 − 5·water_m³/R0 − 40·family_hours/R0 − 0.01·[invalid]**, "
-            "and at the end of the episode a food-reserve term **−(shortfall_kg/90)·price·1.5/R0** is added, where SOM is the mean soil organic matter index and the weights are those in `environment/params.py`. "
+    para(d, f"With W the farm's wealth (cash plus {P.liquid_disc * 100:.0f} percent of the quality-adjusted value of stored grain) and R0 = KES {P.r0:,.0f} the reference gross revenue, the reward each week is "
+            f"**r_t = ΔW/R0 + {P.som_value_kes:,.0f}·ΔSOM/R0 − {P.water_shadow_kes_m3:g}·water_m³/R0 − {P.family_opp_h:g}·family_hours/R0 − {P.invalid_penalty:g}·[invalid]**, "
+            f"and at the end of the episode a food-reserve term **−(shortfall_kg/{P.bag_kg:g})·price·{P.shortfall_mult:g}/R0** is added for any shortfall below the {P.reserve_kg:g} kg reserve. "
+            f"SOM is the mean soil organic matter index; water is costed at KES {P.water_shadow_kes_m3:g} per m³ (refilling the pan) and family labour at KES {P.family_opp_h:g} per hour. "
             "Selling grain, paying for inputs and spoilage all show up through W. There is no shaping term on biomass, greenness or growth stage, so the agent is never "
-            "paid for looking busy. Episodes end at week 52, if the crop is not sown by week 8, if every plot is dead, or if cash falls below −KES 20,000.", after=2)
+            f"paid for looking busy. Episodes end at week 52, if the crop is not sown by week {P.sow_deadline_week}, if every plot is dead, or if cash falls below −KES {abs(P.cash_floor):,.0f}.", after=2)
     comp = env_composite(assets, out_dir / "env_visual.png")
     if comp:
         figure(d, comp, 17.2, "Figure 1. The Three.js viewer reading real Gymnasium states (rule-based policy, seed 1001): vegetative stage, grain filling, and grain filling under the severe-drought scenario. "
@@ -212,6 +351,14 @@ def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo An
             "(a baseline that does not depend on the action), normalises, and adds an entropy bonus; it has no critic. "
             "**PPO** adds a separate value network, GAE advantages and `ClipPPOLoss` with several epochs of minibatch updates per 2,048-step batch. "
             "**A2C** uses the same critic and GAE but takes one gradient step per short on-policy rollout (`A2CLoss`). Evaluation always uses the greedy action (argmax of Q-values or logits).")
+    d.add_heading("c. System Integration", 2)
+    para(d, "Each checkpoint is a weights file plus a JSON sidecar (algorithm, network sizes, observation-spec hash, seed, training metrics); `agents/loader.py` refuses a checkpoint whose "
+            "observation-spec hash does not match the live environment. One policy interface (`reset()`, `act(obs)`) serves three front ends: the evaluator, `play.py` in the terminal "
+            "(one line per week), and a FastAPI backend. The backend exposes REST endpoints (`/api/policies`, `/api/catalogue`, `/api/observation_spec`, and `POST /api/episode`, "
+            "which runs a whole season server-side) and a WebSocket (`/ws`) that streams one state per week with start, step, pause, resume, reset and speed messages. "
+            "Every state is produced by `serialize_state()` in `environment/rendering.py`: per-plot soil moisture, nutrients, canopy, pest and disease levels, weather, stock, cash, "
+            "the action taken and its reward components. The Three.js viewer only draws these JSON states and contains no farm equations, so what it shows is what the "
+            "environment computed. The protocol is documented in `docs/API.md`.")
 
     # ------------------------------------------------------------------ 4
     d.add_heading("4. Implementation", 1)
@@ -236,6 +383,7 @@ def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo An
         t = effects_text(R, a)
         if t:
             para(d, f"**{L[a]}.** {t}", size=9)
+    para(d, f"**Across the sweeps.** {sweep_summary(R)}", size=9)
 
     # ------------------------------------------------------------------ 5
     d.add_heading("5. Results Discussion", 1)
@@ -249,9 +397,14 @@ def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo An
             "Seasons are paired: every policy faced the same weather and prices, so these are paired Wilcoxon tests on per-season returns.")
     figure(d, figs["objective"], 17.4, "Figure 4. Objective curves: DQN temporal-difference loss (log scale) and policy entropy for REINFORCE, PPO and A2C. The dotted line is the entropy of a uniform policy over 20 actions (ln 20 = 3.0).")
     dq = R.table(R.runs("dqn", sel["dqn"]).iloc[0].run_dir, "updates")
-    para(d, "**Reading the objective curves.** " + (f"The DQN TD loss moved from {dq.td_loss.iloc[:5].mean():.4f} in the first updates to {dq.td_loss.iloc[-5:].mean():.4f} at the end. A falling TD loss alone does not mean the policy improved, because the targets move as the policy and the replay data change; I therefore read it next to the evaluation curve (Figure 5). " if len(dq) else "")
-            + "Entropy shows how fast each policy method commits to a behaviour: a curve that collapses early leaves little exploration, and one that stays near ln 20 means the policy is still close to random. "
-            + "REINFORCE, which waits for whole-episode returns and has the noisiest gradient, is the one I would expect to drift the most between updates.", size=9)
+    cq = conv.set_index("algo")
+    txt = "**Reading the objective curves.** "
+    if len(dq):
+        txt += (f"The DQN TD loss fell from {dq.td_loss.iloc[:5].mean():.4f} in the first updates to {dq.td_loss.iloc[-5:].mean():.4f} at the end, yet its validation return peaked at "
+                f"{cq.loc['dqn', 'best_val']:.3f} and finished at {cq.loc['dqn', 'last_val']:.3f} (Figure 5). A small TD loss means the Q-values agree with their own targets, not that the greedy "
+                "policy is good, because the targets move with the policy and the replay data. ")
+    txt += f"Entropy shows how far each policy method has committed (uniform over 20 actions is {np.log(20):.2f}). " + entropy_text(R, sel) + " "
+    para(d, txt, size=9)
     figure(d, figs["eval"], 11.2, "Figure 5. Greedy validation return during training (50 fixed seasons, mean ± sd over seeds).")
 
     d.add_heading("b. Episodes To Converge", 2)
@@ -262,9 +415,10 @@ def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo An
         v = c.converge_episode.dropna()
         crow.append([L[a], f"{int(c.episodes.median()):,}", f"{v.median():,.0f}" if len(v) else "no stable improvement", f"{c.final_train.mean():.3f}", f"{c.late_std.mean():.3f}", f"{c.best_val.mean():.3f}", f"{c.val_drawdown.mean():.3f}"])
     table(d, ["Method", "Training episodes", "Episodes to converge", "Final train return", "Late sd of return", "Best val return", "Val drawdown"], crow, [2.4, 2.4, 3.2, 2.4, 2.4, 2.4, 2.2], size=7.5, align_right_from=1)
-    para(d, "I define convergence as the first episode after which the 40-episode moving average of the training return never falls below the start value plus 90 percent of the "
+    para(d, "I define convergence as the first episode after which the 50-episode moving average of the training return never falls below the start value plus 90 percent of the "
             "gain between the start and the end of training. A run that gains less than 0.05 return units is reported as having no stable improvement. This definition describes the "
-            "training curve of the run, so a method can 'converge' to a mediocre policy; I therefore also report the validation drawdown, which is how far the last evaluation sat below the best one.", size=9)
+            "training curve of the run, so a method can 'converge' to a mediocre policy; I therefore also report the validation drawdown, which is how far the last evaluation sat below the best one. "
+            + convergence_text(conv), size=9)
 
     d.add_heading("c. Generalization", 2)
     figure(d, figs["general"], 17.4, "Figure 7. Test return on 200 unseen in-distribution seasons and 50 seasons in each of seven out-of-distribution scenarios, and the crop-failure rate in each.")
@@ -286,6 +440,22 @@ def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo An
     ag = summ
     para(d, "**What the policies actually did.** " + "; ".join(f"{L[p]}: {ag.loc[p, 'marketable_bags']:.1f} marketable bags, net KES {ag.loc[p, 'net_return_kes']:,.0f}, {ag.loc[p, 'crop_failure'] * 100:.0f}% crop failures, {ag.loc[p, 'water_used_m3']:.0f} m³ water, {ag.loc[p, 'invalid_actions']:.1f} impossible actions per season, food reserve kept in {ag.loc[p, 'food_reserve_met'] * 100:.0f}% of seasons" for p in ALGOS + ["rule_based", "random"] if p in ag.index)
             + ". " + gap_text(summ, top) + " The per-action counts behind this are in `experiments/results/test_summary.csv` and Figure 10 of the repository (`fig_action_profile.png`).", size=9)
+    inv = invalid_summary(invalid_profile(out_dir))
+    if inv:
+        def top2(a):
+            return " and ".join(f"{act.replace('_', ' ')} ({reason}, {v:.1f})" for act, reason, v in inv[a]["top"])
+        para(d, "**Why the learners attempt so many impossible actions.** Replaying the exported checkpoints on the same test seasons shows that the learners almost never choose "
+                "wait (" + ", ".join(f"{L[a]} {inv[a]['wait']:.1f}" for a in ALGOS if a in inv) + " times per season). Their idle weeks are spent on an action that is impossible "
+                "at that moment and therefore runs as a wait: " + "; ".join(f"{L[a]} mostly {top2(a)}" for a in ALGOS if a in inv) + " per season. "
+                f"Each costs only {P.invalid_penalty:g}, so {inv[top]['invalid']:.0f} of them cost {L[top]} about {inv[top]['invalid'] * P.invalid_penalty:.2f} per season, small next to its return. "
+                "The learners have in effect learned a second 'wait' action, and because the mask is not given to them they cannot tell the two apart. This comes from the reward design "
+                "and costs little on its own. "
+                + (lambda good, bad: (f"{', '.join(L[a] for a in good)} still take the actions that matter at the right stage: they sow, harvest, dry and store, losing at most "
+                                      f"{max(summ.loc[a, 'post_harvest_loss_frac'] for a in good) * 100:.0f} percent of the grain after harvest. " if good else "")
+                   + "".join(f"{L[a]} harvests but almost never dries or stores the grain, so it loses {summ.loc[a, 'post_harvest_loss_frac'] * 100:.0f} percent of its grain after harvest and sells only {summ.loc[a, 'marketable_bags']:.1f} bags, a large part of why its return is low. " for a in bad))(
+                    [a for a in ALGOS if a in summ.index and summ.loc[a, "post_harvest_loss_frac"] < 0.1],
+                    [a for a in ALGOS if a in summ.index and summ.loc[a, "post_harvest_loss_frac"] >= 0.1])
+                + "A larger invalid-action penalty or action masking would remove the habit.", size=9)
 
     # ------------------------------------------------------------------ 6
     d.add_heading("6. Conclusion and Discussion", 1)
@@ -303,7 +473,7 @@ def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo An
     para(d, "**Strengths and weaknesses for this problem.** DQN reuses every transition, which matters when only 52 decisions make an episode, but it must learn values for 20 actions across stage-dependent decisions "
             "and its performance depends on the exploration schedule and buffer. REINFORCE is the simplest and the only method with no critic, but its gradient uses whole-episode returns, so it is noisy and needs many episodes per update. "
             "PPO's clipped updates and GAE usually give steadier progress per batch at the price of more hyperparameters. A2C updates after every short rollout, which is quick but noisier than PPO. "
-            "Whether each of these tendencies showed up is what Sections 4 and 5 report; where a result goes against the usual expectation I treat it as a property of this run and not as a finding.")
+            + observed_text(R, sel, conv, summ))
     para(d, "**Limits.** The weather is synthetic, calibrated to published normals, because no daily station record for Njoro was available; parameters are tagged literature, calibrated, synthetic or convenience in `environment/params.py`. "
             "Maize is a sole crop with no intercropping, one farm size and one soil family. Four plots share one decision. Reward weights for soil and water are my modelling choices, and I found while building it that an early soil weight let a policy "
             "earn most of its return from repeated manure application, so I reduced the soil gain per application. Training budgets are small by RL standards. "
@@ -315,8 +485,16 @@ def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo An
 
 
 def to_pdf(docx_path: Path) -> Path:
-    subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(docx_path.parent), str(docx_path)], check=True, capture_output=True, timeout=180)
-    return docx_path.with_suffix(".pdf")
+    """LibreOffice if it is installed; otherwise Microsoft Word through PowerShell (Windows)."""
+    pdf = docx_path.with_suffix(".pdf")
+    try:
+        subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(docx_path.parent), str(docx_path)], check=True, capture_output=True, timeout=180)
+    except FileNotFoundError:
+        src, dst = str(docx_path.resolve()), str(pdf.resolve())
+        ps = (f"$w = New-Object -ComObject Word.Application; $w.DisplayAlerts = 0; $w.Visible = $false; "
+              f"$d = $w.Documents.Open('{src}', $false, $true, $false); $d.ExportAsFixedFormat('{dst}', 17); $d.Close($false); $w.Quit()")
+        subprocess.run(["powershell", "-NoProfile", "-Command", ps], check=True, capture_output=True, timeout=180)
+    return pdf
 
 
 def page_count(pdf: Path) -> int:

@@ -133,7 +133,7 @@ def gap_text(summ, top: str) -> str:
             f"the rest is {(gap - soil - water):+.3f}, mainly wealth, labour and the end-of-year reserve. The reward weights are my choice, so a different soil weight would change this split.")
 
 
-def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo Andrew", video="[link to be added after recording]", repo="[link to be added after push]") -> tuple[Path, Path]:
+def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo Andrew", video="https://www.youtube.com/watch?v=vv_giK4jY10", repo="https://github.com/OgayoTK1/reinforcement_learning") -> tuple[Path, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     sel = {a: R.best_name(a) for a in ALGOS}
     test = R.test
@@ -152,7 +152,7 @@ def build(R: Results, figs: dict, out_dir: Path, assets: Path, student="Ogayo An
     footer_page_numbers(d, "AgriResilience RL: Reinforcement Learning Summative")
     para(d, "AFRICAN LEADERSHIP UNIVERSITY   |   BSE   |   ML TECHNIQUES II   |   SUMMATIVE ASSIGNMENT", bold=True, size=8, after=1)
     para(d, "Reinforcement Learning Summative Assignment Report", bold=True, size=15, after=1)
-    para(d, f"**Student Name:** {student}      **Video Recording:** {video}      **GitHub Repository:** {repo} (andrew_rl_summative)", size=8.5, after=2)
+    para(d, f"**Student Name:** {student}      **Video Recording:** {video}      **GitHub Repository:** {repo}", size=8.5, after=2)
 
     # ------------------------------------------------------------------ 1
     d.add_heading("1. Project Overview", 1)

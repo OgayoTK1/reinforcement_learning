@@ -5,6 +5,9 @@ holding for 52 weeks (Gymnasium environment `AgriResilienceEnv`), and four Torch
 tuned (40 configurations), compared against a random and a rule-based policy, and replayed in a Three.js farm viewer that
 reads real environment states. Built for the ALU *Machine Learning Techniques II* summative.
 
+* **Video walkthrough:** https://www.youtube.com/watch?v=vv_giK4jY10
+* **Repository:** https://github.com/OgayoTK1/reinforcement_learning
+
 **Read this first.** This is a simulation and an algorithm comparison. The weather is synthetic (calibrated to published normals),
 and many agronomic parameters are literature-informed assumptions. Results show how the four algorithms behave inside this model,
 not that any policy would raise yields on a real farm. Every parameter is tagged literature / calibrated / synthetic / convenience in
@@ -13,6 +16,8 @@ not that any policy would raise yields on a real farm. Every parameter is tagged
 ## Quick start (fresh clone)
 
 ```bash
+git clone https://github.com/OgayoTK1/reinforcement_learning.git
+cd reinforcement_learning
 uv sync                 # creates .venv and installs everything from uv.lock (PyTorch is large, allow a few minutes)
 uv run main.py          # starts the viewer at http://127.0.0.1:8000 and opens your browser
 ```
